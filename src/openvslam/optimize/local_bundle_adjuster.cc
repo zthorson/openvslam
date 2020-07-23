@@ -45,12 +45,12 @@ void local_bundle_adjuster::optimize(openvslam::data::keyframe* curr_keyfrm, boo
         local_keyfrms[local_keyfrm->id_] = local_keyfrm;
     }
 
-    // correct local landmarks seen in local keyframes
-    std::unordered_map<unsigned int, data::landmark*> local_lms;
+    // Correct landmarks seen in local keyframes
+    std::unordered_map<unsigned int, std::shared_ptr<data::landmark>> local_lms;
 
     for (auto local_keyfrm : local_keyfrms) {
         const auto landmarks = local_keyfrm.second->get_landmarks();
-        for (auto local_lm : landmarks) {
+        for (const auto& local_lm : landmarks) {
             if (!local_lm) {
                 continue;
             }
@@ -70,7 +70,7 @@ void local_bundle_adjuster::optimize(openvslam::data::keyframe* curr_keyfrm, boo
     // fixed keyframes: keyframes which observe local landmarks but which are NOT in local keyframes
     std::unordered_map<unsigned int, data::keyframe*> fixed_keyfrms;
 
-    for (auto local_lm : local_lms) {
+    for (const auto& local_lm : local_lms) {
         const auto observations = local_lm.second->get_observations();
         for (auto& obs : observations) {
             auto fixed_keyfrm = obs.first;
@@ -151,8 +151,8 @@ void local_bundle_adjuster::optimize(openvslam::data::keyframe* curr_keyfrm, boo
     constexpr float chi_sq_3D = 7.81473;
     const float sqrt_chi_sq_3D = std::sqrt(chi_sq_3D);
 
-    for (auto& id_local_lm_pair : local_lms) {
-        auto local_lm = id_local_lm_pair.second;
+    for (const auto& id_local_lm_pair : local_lms) {
+        const auto local_lm = id_local_lm_pair.second;
 
         // landmarkをg2oのvertexに変換してoptimizerにセットする
         auto lm_vtx = lm_vtx_container.create_vertex(local_lm, false);
@@ -209,7 +209,7 @@ void local_bundle_adjuster::optimize(openvslam::data::keyframe* curr_keyfrm, boo
         for (auto& reproj_edge_wrap : reproj_edge_wraps) {
             auto edge = reproj_edge_wrap.edge_;
 
-            auto local_lm = reproj_edge_wrap.lm_;
+            const auto& local_lm = reproj_edge_wrap.lm_;
             if (local_lm->will_be_erased()) {
                 continue;
             }
@@ -234,13 +234,13 @@ void local_bundle_adjuster::optimize(openvslam::data::keyframe* curr_keyfrm, boo
 
     // 7. アウトライアを集計する
 
-    std::vector<std::pair<data::keyframe*, data::landmark*>> outlier_observations;
+    std::vector<std::pair<data::keyframe*, std::shared_ptr<data::landmark>>> outlier_observations;
     outlier_observations.reserve(reproj_edge_wraps.size());
 
     for (auto& reproj_edge_wrap : reproj_edge_wraps) {
         auto edge = reproj_edge_wrap.edge_;
 
-        auto local_lm = reproj_edge_wrap.lm_;
+        const auto& local_lm = reproj_edge_wrap.lm_;
         if (local_lm->will_be_erased()) {
             continue;
         }
@@ -262,13 +262,11 @@ void local_bundle_adjuster::optimize(openvslam::data::keyframe* curr_keyfrm, boo
     {
         std::lock_guard<std::mutex> lock(data::map_database::mtx_database_);
 
-        if (!outlier_observations.empty()) {
-            for (auto& outlier_obs : outlier_observations) {
-                auto keyfrm = outlier_obs.first;
-                auto lm = outlier_obs.second;
-                keyfrm->erase_landmark(lm);
-                lm->erase_observation(keyfrm);
-            }
+        for (const auto& outlier_obs : outlier_observations) {
+            auto keyfrm = outlier_obs.first;
+            const auto& lm = outlier_obs.second;
+            keyfrm->erase_landmark(lm);
+            lm->erase_observation(keyfrm);
         }
 
         for (auto id_local_keyfrm_pair : local_keyfrms) {
@@ -278,8 +276,8 @@ void local_bundle_adjuster::optimize(openvslam::data::keyframe* curr_keyfrm, boo
             local_keyfrm->set_cam_pose(keyfrm_vtx->estimate());
         }
 
-        for (auto id_local_lm_pair : local_lms) {
-            auto local_lm = id_local_lm_pair.second;
+        for (const auto& id_local_lm_pair : local_lms) {
+            const auto& local_lm = id_local_lm_pair.second;
 
             auto lm_vtx = lm_vtx_container.get_vertex(local_lm);
             local_lm->set_pos_in_world(lm_vtx->estimate());

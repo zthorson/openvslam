@@ -60,8 +60,9 @@ bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::fra
     // BoW matchを行うのでBoWを計算しておく
     curr_frm.compute_bow();
 
-    // keyframeとframeで2D対応を探して，frameの特徴点とkeyframeで観測している3次元点の対応を得る
-    std::vector<data::landmark*> matched_lms_in_curr;
+    // Search 2D-2D matches between the ref keyframes and the current frame
+    // to acquire 2D-3D matches between the frame keypoints and 3D points observed in the ref keyframe
+    std::vector<std::shared_ptr<data::landmark>> matched_lms_in_curr;
     auto num_matches = bow_matcher.match_frame_and_keyframe(ref_keyfrm, curr_frm, matched_lms_in_curr);
 
     if (num_matches < num_matches_thr_) {
@@ -92,8 +93,9 @@ bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::fra
 bool frame_tracker::robust_match_based_track(data::frame& curr_frm, const data::frame& last_frm, data::keyframe* ref_keyfrm) const {
     match::robust robust_matcher(0.8, false);
 
-    // keyframeとframeで2D対応を探して，frameの特徴点とkeyframeで観測している3次元点の対応を得る
-    std::vector<data::landmark*> matched_lms_in_curr;
+    // Search 2D-2D matches between the ref keyframes and the current frame
+    // to acquire 2D-3D matches between the frame keypoints and 3D points observed in the ref keyframe
+    std::vector<std::shared_ptr<data::landmark>> matched_lms_in_curr;
     auto num_matches = robust_matcher.match_frame_and_keyframe(curr_frm, ref_keyfrm, matched_lms_in_curr);
 
     if (num_matches < num_matches_thr_) {
@@ -129,13 +131,13 @@ unsigned int frame_tracker::discard_outliers(data::frame& curr_frm) const {
             continue;
         }
 
-        auto lm = curr_frm.landmarks_.at(idx);
+        auto& lm = curr_frm.landmarks_.at(idx);
 
         if (curr_frm.outlier_flags_.at(idx)) {
-            curr_frm.landmarks_.at(idx) = nullptr;
             curr_frm.outlier_flags_.at(idx) = false;
             lm->is_observable_in_tracking_ = false;
             lm->identifier_in_local_lm_search_ = curr_frm.id_;
+            lm = nullptr;
             continue;
         }
 

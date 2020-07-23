@@ -65,7 +65,7 @@ keyframe::keyframe(const unsigned int id, const unsigned int src_frm_id, const d
       level_sigma_sq_(feature::orb_params::calc_level_sigma_sq(num_scale_levels, scale_factor)),
       inv_level_sigma_sq_(feature::orb_params::calc_inv_level_sigma_sq(num_scale_levels, scale_factor)),
       // others
-      landmarks_(std::vector<landmark*>(num_keypts, nullptr)),
+      landmarks_(std::vector<std::shared_ptr<landmark>>(num_keypts, nullptr)),
       // databases
       map_db_(map_db), bow_db_(bow_db), bow_vocab_(bow_vocab) {
     // compute BoW (bow_vec_, bow_feat_vec_) using descriptors_
@@ -188,7 +188,7 @@ void keyframe::compute_bow() {
     }
 }
 
-void keyframe::add_landmark(landmark* lm, const unsigned int idx) {
+void keyframe::add_landmark(std::shared_ptr<landmark> lm, const unsigned int idx) {
     std::lock_guard<std::mutex> lock(mtx_observations_);
     landmarks_.at(idx) = lm;
 }
@@ -198,27 +198,29 @@ void keyframe::erase_landmark_with_index(const unsigned int idx) {
     landmarks_.at(idx) = nullptr;
 }
 
-void keyframe::erase_landmark(landmark* lm) {
+void keyframe::erase_landmark(const std::shared_ptr<landmark>& lm) {
+    std::lock_guard<std::mutex> lock(mtx_observations_);
     int idx = lm->get_index_in_keyframe(this);
     if (0 <= idx) {
         landmarks_.at(static_cast<unsigned int>(idx)) = nullptr;
     }
 }
 
-void keyframe::replace_landmark(landmark* lm, const unsigned int idx) {
+void keyframe::replace_landmark(std::shared_ptr<landmark>& lm, const unsigned int idx) {
+    std::lock_guard<std::mutex> lock(mtx_observations_);
     landmarks_.at(idx) = lm;
 }
 
-std::vector<landmark*> keyframe::get_landmarks() const {
+std::vector<std::shared_ptr<landmark>> keyframe::get_landmarks() const {
     std::lock_guard<std::mutex> lock(mtx_observations_);
     return landmarks_;
 }
 
-std::set<landmark*> keyframe::get_valid_landmarks() const {
+std::set<std::shared_ptr<landmark>> keyframe::get_valid_landmarks() const {
     std::lock_guard<std::mutex> lock(mtx_observations_);
-    std::set<landmark*> valid_landmarks;
+    std::set<std::shared_ptr<landmark>> valid_landmarks;
 
-    for (const auto lm : landmarks_) {
+    for (const auto& lm : landmarks_) {
         if (!lm) {
             continue;
         }
@@ -237,7 +239,7 @@ unsigned int keyframe::get_num_tracked_landmarks(const unsigned int min_num_obs_
     unsigned int num_tracked_lms = 0;
 
     if (0 < min_num_obs_thr) {
-        for (const auto lm : landmarks_) {
+        for (const auto& lm : landmarks_) {
             if (!lm) {
                 continue;
             }
@@ -251,7 +253,7 @@ unsigned int keyframe::get_num_tracked_landmarks(const unsigned int min_num_obs_
         }
     }
     else {
-        for (const auto lm : landmarks_) {
+        for (const auto& lm : landmarks_) {
             if (!lm) {
                 continue;
             }
@@ -266,7 +268,7 @@ unsigned int keyframe::get_num_tracked_landmarks(const unsigned int min_num_obs_
     return num_tracked_lms;
 }
 
-landmark* keyframe::get_landmark(const unsigned int idx) const {
+std::shared_ptr<landmark>& keyframe::get_landmark(const unsigned int idx) {
     std::lock_guard<std::mutex> lock(mtx_observations_);
     return landmarks_.at(idx);
 }
@@ -324,7 +326,7 @@ Vec3_t keyframe::triangulate_stereo(const unsigned int idx) const {
 }
 
 float keyframe::compute_median_depth(const bool abs) const {
-    std::vector<landmark*> landmarks;
+    std::vector<std::shared_ptr<landmark>> landmarks;
     Mat44_t cam_pose_cw;
     {
         std::lock_guard<std::mutex> lock1(mtx_observations_);
@@ -338,7 +340,7 @@ float keyframe::compute_median_depth(const bool abs) const {
     const Vec3_t rot_cw_z_row = cam_pose_cw.block<1, 3>(2, 0);
     const float trans_cw_z = cam_pose_cw(2, 3);
 
-    for (const auto lm : landmarks) {
+    for (const auto& lm : landmarks) {
         if (!lm) {
             continue;
         }
@@ -378,10 +380,13 @@ void keyframe::prepare_for_erasing() {
     will_be_erased_ = true;
 
     // 2. remove associations between keypoints and landmarks
-
-    for (const auto lm : landmarks_) {
-        if (!lm) {
-            continue;
+    {
+        std::lock_guard<std::mutex> lock(mtx_observations_);
+        for (const auto& lm : landmarks_) {
+            if (!lm) {
+                continue;
+            }
+            lm->erase_observation(this);
         }
         lm->erase_observation(this);
     }

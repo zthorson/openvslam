@@ -257,9 +257,8 @@ void graph_optimizer::optimize(data::keyframe* loop_keyfrm, data::keyframe* curr
 
             corrected_Sim3s_wc.at(id) = corrected_Sim3_cw.inverse();
         }
-
-        // 点群の位置を修正
-        for (auto lm : all_lms) {
+        // Update the point-cloud
+        for (const auto& lm : all_lms) {
             if (lm->will_be_erased()) {
                 continue;
             }
