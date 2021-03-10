@@ -11,7 +11,7 @@
 #include <g2o/core/block_solver.h>
 #include <g2o/core/sparse_optimizer.h>
 #include <g2o/core/robust_kernel_impl.h>
-#include <g2o/solvers/csparse/linear_solver_csparse.h>
+#include <g2o/solvers/eigen/linear_solver_eigen.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
 
 namespace openvslam {
@@ -26,7 +26,7 @@ void graph_optimizer::optimize(data::keyframe* loop_keyfrm, data::keyframe* curr
                                const std::map<data::keyframe*, std::set<data::keyframe*>>& loop_connections) const {
     // 1. optimizerを構築
 
-    auto linear_solver = ::g2o::make_unique<::g2o::LinearSolverCSparse<::g2o::BlockSolver_7_3::PoseMatrixType>>();
+    auto linear_solver = ::g2o::make_unique<::g2o::LinearSolverEigen<::g2o::BlockSolver_7_3::PoseMatrixType>>();
     auto block_solver = ::g2o::make_unique<::g2o::BlockSolver_7_3>(std::move(linear_solver));
     auto algorithm = new ::g2o::OptimizationAlgorithmLevenberg(std::move(block_solver));
 

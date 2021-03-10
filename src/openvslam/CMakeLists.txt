@@ -14,27 +14,8 @@ find_package(g2o REQUIRED
              g2o::types_sba
              g2o::types_sim3
              g2o::solver_dense
-             g2o::solver_eigen
-             g2o::solver_csparse
-             g2o::csparse_extension
-             OPTIONAL_COMPONENTS
-             g2o::csparse)
+             g2o::solver_eigen)
 
-# Check first if CSparse is built from g2o
-if(TARGET g2o::csparse)
-    set(${CXSPARSE_LIBRARIES} g2o::csparse)
-else()
-    # CXSparse for g2o
-    find_package(CXSparse)
-    if(CXSPARSE_FOUND)
-        include_directories(${CXSPARSE_INCLUDE_DIRS})
-    endif()
-    # SuiteSparse for g2o
-    find_package(SuiteSparse)
-    if(SUITESPARSE_FOUND)
-        include_directories(${SUITESPARSE_INCLUDE_DIRS})
-    endif()
-endif()
 
 # ----- Create OpenVSLAM library -----
 
@@ -139,8 +120,6 @@ target_link_libraries(${PROJECT_NAME}
                       g2o::types_sim3
                       g2o::solver_dense
                       g2o::solver_eigen
-                      g2o::solver_csparse
-                      g2o::csparse_extension
                       ${CXSPARSE_LIBRARIES}
                       ${SUITESPARSE_LIBRARIES}
                       ${BoW_LIBRARY}

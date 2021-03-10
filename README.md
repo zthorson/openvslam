@@ -92,7 +92,7 @@ The following files are derived from third-party libraries.
 - `./viewer/public/js/lib/stats.min.js` : [mrdoob/stats.js](https://github.com/mrdoob/stats.js) (MIT license)
 - `./viewer/public/js/lib/three.min.js` : [mrdoob/three.js](https://github.com/mrdoob/three.js) (MIT license)
 
-Please use `g2o` as the dynamic link library because `csparse_extension` module of `g2o` is LGPLv3+.
+g2o_csparse has been replaced by the eigen solver to prevent LGPLv3+ licensing during static compilation.
 
 ## Contributors
 

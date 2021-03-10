@@ -258,7 +258,6 @@ Download, build and install g2o.
         -DBUILD_UNITTESTS=OFF \
         -DBUILD_WITH_MARCH_NATIVE=ON \
         -DG2O_USE_CHOLMOD=OFF \
-        -DG2O_USE_CSPARSE=ON \
         -DG2O_USE_OPENGL=OFF \
         -DG2O_USE_OPENMP=ON \
         ..
