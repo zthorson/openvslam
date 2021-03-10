@@ -13,6 +13,9 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+# Allow static or dynamic libraries
+option(BUILD_SHARED_LIBS "Enable Building shared libraries, otherwise builds static." ON)
+
 # ----- Set build type -----
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -62,12 +65,24 @@ if(BUILD_WITH_MARCH_NATIVE)
     set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -mtune=native -march=native")
     message(STATUS "Architecture-aware optimization (-march=native): ENABLED")
 else()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
-    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
     message(STATUS "Architecture-aware optimization (-march=native): DISABLED")
 endif()
 
 # ----- Find dependencies -----
+
+# Workaround to issues with cmake and pthreads
+# See: https://gitlab.kitware.com/cmake/cmake/-/issues/18993
+# All of the other solutions did not appear to work with Xcode12 and Cmake 3.19
+# assume built-in pthreads on MacOS/iOS
+IF(APPLE)
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
 
 # Threads
 find_package(Threads REQUIRED)
