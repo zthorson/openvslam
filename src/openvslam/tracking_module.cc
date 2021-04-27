@@ -45,6 +45,13 @@ tracking_module::~tracking_module() {
     delete ini_extractor_left_;
     ini_extractor_left_ = nullptr;
 
+    // Clear static variables, otherwise creating a new class instance may have
+    // odd behavior.
+    spdlog::info("clear static tracking ids");
+    data::frame::next_id_ = 0;
+    data::keyframe::next_id_ = 0;
+    data::landmark::next_id_ = 0;
+
     spdlog::debug("DESTRUCT: tracking_module");
 }
 
